@@ -1,0 +1,36 @@
+#!/bin/bash
+# Begin LSF Directives
+#BSUB -P TRN019
+#BSUB -W 1:00
+#BSUB -nnodes 2
+#BSUB -alloc_flags gpumps
+#BSUB -J RunSim123
+#BSUB -o RunSim123.%J
+#BSUB -e RunSim123.%J
+
+folder_path="$(pwd)" 
+files=("$folder_path"/*.pdb)  # Get all files in the folder with pdb
+total_files=${#files[@]}  # Get the total number of files
+
+start_time=$(date +%s.%N)
+
+for ((i=0; i<total_files; i+=1)); do
+	for((j = i + 1; j< total_files; j+=1)); do
+  		file1=${files[i]}
+  		file2=${files[j]}
+  
+  		if [[ -f $file1 && -f $file2 ]]; then
+			jsrun -n 1 -r 1 -a 1 -g 1 ./tmscore_gpu $file1 $file2
+			echo $file1 $file2
+  		fi
+	done
+done
+
+end_time=$(date +%s.%N)
+
+execution_time=$(echo "$end_time - $start_time" | bc)
+
+echo "Execution time: $execution_time seconds"
+
+
+cp my_output_file .
