@@ -1,36 +1,49 @@
 #!/bin/bash
 # Begin LSF Directives
 #BSUB -P TRN019
-#BSUB -W 1:00
+#BSUB -W 0:15
 #BSUB -nnodes 2
 #BSUB -alloc_flags gpumps
 #BSUB -J RunSim123
 #BSUB -o RunSim123.%J
 #BSUB -e RunSim123.%J
 
-folder_path="$(pwd)" 
-files=("$folder_path"/*.pdb)  # Get all files in the folder with pdb
-total_files=${#files[@]}  # Get the total number of files
+total_time_gpu=0
+total_time_serial=0
 
-start_time=$(date +%s.%N)
-
-for ((i=0; i<total_files; i+=1)); do
-	for((j = i + 1; j< total_files; j+=1)); do
-  		file1=${files[i]}
-  		file2=${files[j]}
+for ((i=0; i<100; i+=1)); do
   
-  		if [[ -f $file1 && -f $file2 ]]; then
-			jsrun -n 1 -r 1 -a 1 -g 1 ./tmscore_gpu $file1 $file2
-			echo $file1 $file2
-  		fi
-	done
+	start_time=$(date +%s.%N)
+	jsrun -n 1 -r 1 -a 1 -g 1 ./tmscore_gpu model1-A1A5B4.pdb model2-A1A5B4.pdb
+	end_time=$(date +%s.%N)
+
+	execution_time=$(echo "$end_time - $start_time" | bc)
+	total_time_gpu=$(echo "$total_time_gpu + $execution_time" | bc)
 done
 
-end_time=$(date +%s.%N)
+gpu_average_execution_time=$(echo "scale=4; $total_time_gpu / 100" | bc)
 
-execution_time=$(echo "$end_time - $start_time" | bc)
+echo "GPU Average Execution Time = $gpu_average_execution_time seconds"
 
-echo "Execution time: $execution_time seconds"
+
+for ((j=0; j<100; j+=1)); do
+  
+        start_time=$(date +%s.%N)
+        jsrun -n 1 -r 1 -a 1 -g 1 ./tmscore_serial model1-A1A5B4.pdb model2-A1A5B4.pdb
+        end_time=$(date +%s.%N)
+
+        execution_time=$(echo "$end_time - $start_time" | bc)
+        total_time_serial=$(echo "$total_time_serial + $execution_time" | bc)
+done
+
+cpu_average_execution_time=$(echo "scale=4; $total_time_serial / 100" | bc)
+
+
+echo "CPU Average Execution Time = $cpu_average_execution_time seconds"
+echo "GPU Average Execution Time = $gpu_average_execution_time seconds"
+
+
 
 
 cp my_output_file .
+

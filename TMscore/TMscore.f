@@ -662,8 +662,9 @@ c      enddo
 
 ********* rmsd in superposed regions --------------->
       d=d_output                !for output
+
       call score_fun()          !give i_ali(i), score_max=score now
-      
+
 ***   output rotated chain1 + chain2----->
       if(m_out.ne.1)goto 999
 ccc   output CA-trace superposition------>
@@ -955,7 +956,10 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       score_maxsub_sum=0        !Maxsub-score
       score_sum=0               !TMscore
       score_sum10=0             !TMscore10
-
+!!$OMP target teams distribute parallel do map(to: iA(:), iB(:), xt(:),
+!!$OMP& xb(:), yt(:), yb(:), zt(:), zb(:)) map(tofrom: i_ali(:))
+!!$OMP target teams
+!!$OMP parallel do
       do k=1,n_ali
          i=iA(k)                ![1,nseqA] reoder number of structureA
          j=iB(k)                ![1,nseqB]
@@ -993,6 +997,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          endif
       enddo
 !!$OMP end parallel do
+! !$OMP end target teams
+!!$OMP end target teams distribute parallel do
      
       if(n_cut.lt.3.and.n_ali.gt.3)then
          d_tmp=d_tmp+.5
