@@ -304,11 +304,11 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ******************************************************************
       if(m_complex.eq.0)then    !monomer
          k=0
-!$OMP target teams distribute parallel do collapse(2) 
-!$OMP& reduction(+:k)
-!$OMP& map(to: nseqA, nseqB, nresA, nresB, ins1, ins2) 
-!$OMP& map(tofrom: iA, iB, k)
-
+!!$OMP target teams distribute parallel do simd collapse(2) 
+!!$OMP& reduction(+:k)
+!!$OMP& map(tofrom: nseqA, nseqB, nresA, nresB, ins1, ins2) 
+!!$OMP& map(tofrom: k, iA, iB)
+!!$OMP parallel do
          do i=1,nseqA
             do j=1,nseqB
                if(nresA(i).eq.nresB(j))then
@@ -322,14 +322,14 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             enddo
  205        continue
          enddo
-
-!$OMP end target teams distribute parallel do
+!!$OMP end parallel do
+!!$OMP end target teams !distribute parallel do simd
       else                      !complex
          k=0
-!$OMP target teams distribute parallel do collapse(2)
+!$OMP target teams distribute parallel do simd collapse(2)
 !$OMP& reduction(+:k)
 !$OMP& map(to: nseqA, nseqB, nresA, nresB, chA, chB, ins1, ins2)
-!$OMP& map(tofrom: k, iA, iB)
+!$OMP& map(from: iA, iB, k)
          do i=1,nseqA
             do j=1,nseqB
                if(nresA(i).eq.nresB(j).and.chA(i).eq.chB(j))then
@@ -343,7 +343,7 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             enddo
  206        continue
          enddo
-!$OMP end target teams distribute parallel do
+!$OMP end target teams distribute parallel do simd
       endif
       n_ali=k                   !number of aligned residues
       if(n_ali.lt.1)then
@@ -355,8 +355,8 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 *     check the residue serial numbers ------------->
       if(m_complex.eq.0)then
          nA_repeat=0
-!$OMP target teams distribute parallel do collapse(2)
-!$OMP& map(to: nresA(:), ins1(:)) map(tofrom:nA_repeat)
+!$OMP target teams distribute parallel do simd collapse(2)
+!$OMP& map(to: nresA(:), ins1(:)) map(from:nA_repeat)
 !$OMP& reduction(+:nA_repeat) 
          do i=1,nseqA
             do j=i+1,nseqA
@@ -367,7 +367,7 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                endif
             enddo
          enddo
-!$OMP end target teams distribute parallel do
+!$OMP end target teams distribute parallel do simd
          if(nA_repeat.gt.0)then
             write(*,380)nA_repeat
          endif
@@ -376,8 +376,8 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      &        'as others in first Chain. Please modify the PDB file ',
      &        'and rerun the program!!')
          nB_repeat=0
-!$OMP target teams distribute parallel do collapse(2)
-!$OMP& map(to: nresB(:), ins2(:)) map(tofrom:nB_repeat)
+!$OMP target teams distribute parallel do simd collapse(2)
+!$OMP& map(to: nresB(:), ins2(:)) map(from:nB_repeat)
 !$OMP& reduction(+:nB_repeat) 
          do i=1,nseqB
             do j=i+1,nseqB
@@ -388,7 +388,7 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                endif
             enddo
          enddo
-!$OMP end target teams distribute parallel do
+!$OMP end target teams distribute parallel do simd
 
          if(nB_repeat.gt.0)then
             write(*,381)nB_repeat
@@ -514,11 +514,14 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                  LL=LL+1
               enddo
               call u3b(w,r_1,r_2,LL,1,rms,u,t,ier) !u rotate r_1 to r_2
+!!$OMP target teams distribute parallel do simd map(to: t(:), xa(:),
+!!$OMP& u(:, :), ya(:), za(:)) map(from: xt(:), yt(:), zt(:))
               do j=1,nseqA
                  xt(j)=t(1)+u(1,1)*xa(j)+u(1,2)*ya(j)+u(1,3)*za(j)
                  yt(j)=t(2)+u(2,1)*xa(j)+u(2,2)*ya(j)+u(2,3)*za(j)
                  zt(j)=t(3)+u(3,1)*xa(j)+u(3,2)*ya(j)+u(3,3)*za(j)
               enddo
+!!$OMP end target teams distribute parallel do simd
               call score_fun    !get scores, n_cut+i_ali(i) for iteration
               if(score_max.lt.score)then
                  score_max=score
@@ -622,6 +625,9 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       
 ***   recall and output the superposition of maxiumum TM-score:
       LL=0
+!!$OMP target teams distribute parallel do simd
+!!$OMP& map(to:ib(:),k_ali0(:),xb(:),yb(:),ia(:),xa(:),ya(:),zb(:),za(:))
+!!$OMP& map(from:r_2(:,:),r_1(:,:))
       do i=1,ka0
          m=k_ali0(i)            !record of the best alignment
          r_1(1,i)=xa(iA(m))
@@ -632,8 +638,10 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
          r_2(3,i)=zb(iB(m))
          LL=LL+1
       enddo
+!!$OMP end target teams distribute parallel do simd
       call u3b(w,r_1,r_2,LL,1,rms,u,t,ier) !u rotate r_1 to r_2
-!!$OMP target teams
+!!$OMP target teams distribute parallel do simd map(from: xt(:), yt(:),
+!!$OMP& zt(:)) map(to: t(:), u(:, :), xa(:), ya(:), za(:))
 !!$OMP parallel do
       do j=1,nseqA
          xt(j)=t(1)+u(1,1)*xa(j)+u(1,2)*ya(j)+u(1,3)*za(j)
@@ -641,7 +649,7 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
          zt(j)=t(3)+u(3,1)*xa(j)+u(3,2)*ya(j)+u(3,3)*za(j)
       enddo
 !!$OMP end parallel do
-!!$OMP end target teams
+!!$OMP end target teams distribute parallel do simd
 
 ********* extract rotation matrix ------------>
       write(*,*)'-------- rotation matrix to rotate Chain-1 to ',
@@ -746,7 +754,7 @@ ccc   output all-atom superposition------>
       do i=1,nseqA
          iq(i)=0
       enddo
-!$OMP target teams distribute parallel do map(to:
+!$OMP target teams distribute parallel do simd map(to:
 !$OMP& i_ali(:),ia(:),xb(:),iq(:),yb(:),xt(:),zt(:),zb(:),yt(:),ib(:))
       do i=1,n_cut
          j=iA(i_ali(i))         ![1,nseqA]
@@ -757,7 +765,7 @@ c         write(*,*)i,j,k,dis,d_output,'1--'
             iq(j)=1
          endif
       enddo
-!$OMP end target teams  distribute parallel do
+!$OMP end target teams  distribute parallel do simd
 *******************************************************************
 ***   output aligned sequences
       if(m_complex.eq.0)then
