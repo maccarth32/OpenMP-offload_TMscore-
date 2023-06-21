@@ -12,7 +12,7 @@ LIBS      =-Wl,-rpath=$(OLCF_NVHPC_ROOT)/compilers/lib \
 COMPILER = nvhpc
 
 TMscore.Fortran : TMscore.f
-	$(FC) $(FFLAGS) $(LIBS) $< -o ${@}.${COMPILER}.exe
+	$(FC) $(FFLAGS) $(LIBS) $< -o tmscore_gpu #${@}.${COMPILER}.exe
 	rm -f *.mod
 
 clean:

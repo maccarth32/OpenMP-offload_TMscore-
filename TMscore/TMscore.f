@@ -304,6 +304,11 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ******************************************************************
       if(m_complex.eq.0)then    !monomer
          k=0
+!!$OMP target teams distribute parallel do simd collapse(2) 
+!!$OMP& reduction(+:k)
+!!$OMP& map(tofrom: nseqA, nseqB, nresA, nresB, ins1, ins2) 
+!!$OMP& map(tofrom: k, iA, iB)
+!!$OMP parallel do
          do i=1,nseqA
             do j=1,nseqB
                if(nresA(i).eq.nresB(j))then
@@ -317,8 +322,14 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             enddo
  205        continue
          enddo
+!!$OMP end parallel do
+!!$OMP end target teams !distribute parallel do simd
       else                      !complex
          k=0
+!$OMP target teams distribute parallel do simd collapse(2)
+!$OMP& reduction(+:k)
+!$OMP& map(to: nseqA, nseqB, nresA, nresB, chA, chB, ins1, ins2)
+!$OMP& map(from: iA, iB, k)
          do i=1,nseqA
             do j=1,nseqB
                if(nresA(i).eq.nresB(j).and.chA(i).eq.chB(j))then
@@ -332,6 +343,7 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             enddo
  206        continue
          enddo
+!$OMP end target teams distribute parallel do simd
       endif
       n_ali=k                   !number of aligned residues
       if(n_ali.lt.1)then
@@ -343,6 +355,9 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 *     check the residue serial numbers ------------->
       if(m_complex.eq.0)then
          nA_repeat=0
+!$OMP target teams distribute parallel do simd collapse(2)
+!$OMP& map(to: nresA(:), ins1(:)) map(from:nA_repeat)
+!$OMP& reduction(+:nA_repeat) 
          do i=1,nseqA
             do j=i+1,nseqA
                if(nresA(i).eq.nresA(j))then
@@ -352,6 +367,8 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                endif
             enddo
          enddo
+!$OMP end target teams distribute parallel do simd
+
          if(nA_repeat.gt.0)then
             write(*,380)nA_repeat
          endif
@@ -360,6 +377,9 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      &        'as others in first Chain. Please modify the PDB file ',
      &        'and rerun the program!!')
          nB_repeat=0
+!$OMP target teams distribute parallel do simd collapse(2)
+!$OMP& map(to: nresB(:), ins2(:)) map(from:nB_repeat)
+!$OMP& reduction(+:nB_repeat) 
          do i=1,nseqB
             do j=i+1,nseqB
                if(nresB(i).eq.nresB(j))then
@@ -369,6 +389,8 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                endif
             enddo
          enddo
+!$OMP end target teams distribute parallel do simd
+
          if(nB_repeat.gt.0)then
             write(*,381)nB_repeat
          endif
@@ -427,6 +449,7 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       n_GDT2_max=-1             !number of residues<2
       n_GDT4_max=-1             !number of residues<4
       n_GDT8_max=-1             !number of residues<8
+ 
       do 333 i_init=1,n_init
         L_init=L_ini(i_init)
         iL_max=n_ali-L_init+1
@@ -492,11 +515,14 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                  LL=LL+1
               enddo
               call u3b(w,r_1,r_2,LL,1,rms,u,t,ier) !u rotate r_1 to r_2
+!!$OMP target teams distribute parallel do simd map(to: t(:), xa(:),
+!!$OMP& u(:, :), ya(:), za(:)) map(from: xt(:), yt(:), zt(:))
               do j=1,nseqA
                  xt(j)=t(1)+u(1,1)*xa(j)+u(1,2)*ya(j)+u(1,3)*za(j)
                  yt(j)=t(2)+u(2,1)*xa(j)+u(2,2)*ya(j)+u(2,3)*za(j)
                  zt(j)=t(3)+u(3,1)*xa(j)+u(3,2)*ya(j)+u(3,3)*za(j)
               enddo
+!!$OMP end target teams distribute parallel do simd
               call score_fun    !get scores, n_cut+i_ali(i) for iteration
               if(score_max.lt.score)then
                  score_max=score
@@ -516,16 +542,19 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
               if(it.eq.n_it)goto 302
               if(n_cut.eq.ka)then
                  neq=0
+
                  do i=1,n_cut
                     if(i_ali(i).eq.k_ali(i))neq=neq+1
                  enddo
+                 
                  if(n_cut.eq.neq)goto 302
               endif
  301       continue             !for iteration
  302       continue
  300    continue                !for shift
+
  333  continue                  !for initial length, L_ali/M
-      
+  
       ratio=1
       if(m_len.gt.0)then
          ratio=float(nseqB)/float(l0_fix)
@@ -597,6 +626,9 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       
 ***   recall and output the superposition of maxiumum TM-score:
       LL=0
+!!$OMP target teams distribute parallel do simd
+!!$OMP& map(to:ib(:),k_ali0(:),xb(:),yb(:),ia(:),xa(:),ya(:),zb(:),za(:))
+!!$OMP& map(from:r_2(:,:),r_1(:,:))
       do i=1,ka0
          m=k_ali0(i)            !record of the best alignment
          r_1(1,i)=xa(iA(m))
@@ -607,12 +639,18 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
          r_2(3,i)=zb(iB(m))
          LL=LL+1
       enddo
+!!$OMP end target teams distribute parallel do simd
       call u3b(w,r_1,r_2,LL,1,rms,u,t,ier) !u rotate r_1 to r_2
+!!$OMP target teams distribute parallel do simd map(from: xt(:), yt(:),
+!!$OMP& zt(:)) map(to: t(:), u(:, :), xa(:), ya(:), za(:))
+!$OMP parallel do
       do j=1,nseqA
          xt(j)=t(1)+u(1,1)*xa(j)+u(1,2)*ya(j)+u(1,3)*za(j)
          yt(j)=t(2)+u(2,1)*xa(j)+u(2,2)*ya(j)+u(2,3)*za(j)
          zt(j)=t(3)+u(3,1)*xa(j)+u(3,2)*ya(j)+u(3,3)*za(j)
       enddo
+!$OMP end parallel do
+!!$OMP end target teams distribute parallel do simd
 
 ********* extract rotation matrix ------------>
       write(*,*)'-------- rotation matrix to rotate Chain-1 to ',
@@ -633,8 +671,9 @@ c      enddo
 
 ********* rmsd in superposed regions --------------->
       d=d_output                !for output
+
       call score_fun()          !give i_ali(i), score_max=score now
-      
+
 ***   output rotated chain1 + chain2----->
       if(m_out.ne.1)goto 999
 ccc   output CA-trace superposition------>
@@ -716,6 +755,8 @@ ccc   output all-atom superposition------>
       do i=1,nseqA
          iq(i)=0
       enddo
+!$OMP target teams distribute parallel do simd map(to:
+!$OMP& i_ali(:),ia(:),xb(:),iq(:),yb(:),xt(:),zt(:),zb(:),yt(:),ib(:))
       do i=1,n_cut
          j=iA(i_ali(i))         ![1,nseqA]
          k=iB(i_ali(i))         ![1,nseqB]
@@ -725,6 +766,7 @@ c         write(*,*)i,j,k,dis,d_output,'1--'
             iq(j)=1
          endif
       enddo
+!$OMP end target teams  distribute parallel do simd
 *******************************************************************
 ***   output aligned sequences
       if(m_complex.eq.0)then
@@ -913,7 +955,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       common/GDT/n_GDT05,n_GDT1,n_GDT2,n_GDT4,n_GDT8
       double precision score,score_max,score_fix,score_fix_max
       double precision score_maxsub,score10
-
       d_tmp=d
  21   n_cut=0                   !number of residue-pairs dis<d, for iteration
       n_GDT05=0                 !for GDT-score, # of dis<0.5
@@ -924,6 +965,10 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       score_maxsub_sum=0        !Maxsub-score
       score_sum=0               !TMscore
       score_sum10=0             !TMscore10
+!!$OMP target teams distribute parallel do map(to: iA(:), iB(:), xt(:),
+!!$OMP& xb(:), yt(:), yb(:), zt(:), zb(:)) map(tofrom: i_ali(:))
+!!$OMP target teams
+!!$OMP parallel do
       do k=1,n_ali
          i=iA(k)                ![1,nseqA] reoder number of structureA
          j=iB(k)                ![1,nseqB]
@@ -940,9 +985,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
                n_GDT4=n_GDT4+1
                if(dis.le.2)then
                   n_GDT2=n_GDT2+1
-                  if(dis.le.1)then
+                  if(dis.le.1)then          
                      n_GDT1=n_GDT1+1
-                     if(dis.le.0.5)then
+                     if(dis.le.0.5)then       
                         n_GDT05=n_GDT05+1
                      endif
                   endif
@@ -953,13 +998,17 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          if(dis.lt.3.5)then
             score_maxsub_sum=score_maxsub_sum+1/(1+(dis/3.5)**2)
          endif
-***   for TM-score:
+***   for TM-score:         
          score_sum=score_sum+1/(1+(dis/d0)**2)
-***   for TM-score10:
+***   for TM-score10:         
          if(dis.lt.10)then
             score_sum10=score_sum10+1/(1+(dis/d0)**2)
          endif
       enddo
+!!$OMP end parallel do
+! !$OMP end target teams
+!!$OMP end target teams distribute parallel do
+     
       if(n_cut.lt.3.and.n_ali.gt.3)then
          d_tmp=d_tmp+.5
          goto 21
@@ -1298,4 +1347,5 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       return
       end
       
+
 
