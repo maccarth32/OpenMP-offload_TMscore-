@@ -368,6 +368,7 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             enddo
          enddo
 !$OMP end target teams distribute parallel do simd
+
          if(nA_repeat.gt.0)then
             write(*,380)nA_repeat
          endif
@@ -642,13 +643,13 @@ c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       call u3b(w,r_1,r_2,LL,1,rms,u,t,ier) !u rotate r_1 to r_2
 !!$OMP target teams distribute parallel do simd map(from: xt(:), yt(:),
 !!$OMP& zt(:)) map(to: t(:), u(:, :), xa(:), ya(:), za(:))
-!!$OMP parallel do
+!$OMP parallel do
       do j=1,nseqA
          xt(j)=t(1)+u(1,1)*xa(j)+u(1,2)*ya(j)+u(1,3)*za(j)
          yt(j)=t(2)+u(2,1)*xa(j)+u(2,2)*ya(j)+u(2,3)*za(j)
          zt(j)=t(3)+u(3,1)*xa(j)+u(3,2)*ya(j)+u(3,3)*za(j)
       enddo
-!!$OMP end parallel do
+!$OMP end parallel do
 !!$OMP end target teams distribute parallel do simd
 
 ********* extract rotation matrix ------------>

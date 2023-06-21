@@ -1,7 +1,7 @@
 #!/bin/bash
 # Begin LSF Directives
 #BSUB -P TRN019
-#BSUB -W 0:30
+#BSUB -W 2:00
 #BSUB -nnodes 2
 #BSUB -alloc_flags gpumps
 #BSUB -J RunSim123
@@ -14,7 +14,7 @@ total_time_serial=0
 for ((i=0; i<1000; i+=1)); do
   
 	start_time=$(date +%s.%N)
-	time jsrun -n 1 -r 1 -a 1 -g 1 ./tmscore_gpu 3s5m.pdb 3s5m.pdb
+	time jsrun -n 1 -r 1 -a 1 -g 1 ./tmscore_gpu pdb1.pdb pdb2.pdb
 	end_time=$(date +%s.%N)
 
 	execution_time=$(echo "$end_time - $start_time" | bc)
@@ -29,7 +29,7 @@ echo "GPU Average Execution Time = $gpu_average_execution_time seconds"
 for ((j=0; j<1000; j+=1)); do
   
         start_time=$(date +%s.%N)
-        time jsrun -n 1 -r 1 -a 1 -g 1 ./tmscore_serial 3s5m.pdb 3s5m.pdb
+        time jsrun -n 1 -r 1 -a 1 -g 1 ./tmscore_serial pdb1.pdb pdb2.pdb
         end_time=$(date +%s.%N)
 
         execution_time=$(echo "$end_time - $start_time" | bc)
