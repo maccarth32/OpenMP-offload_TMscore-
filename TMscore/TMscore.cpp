@@ -3212,9 +3212,11 @@ bool Kabsch(double **x, double **y, int n, int mode, double *rms,
     if (n<1) return false;
 
     //compute centers for vector sets x, y
+    
     for (i = 0; i<n; i++)
     {
-        for (j = 0; j < 3; j++)
+   
+	for (j = 0; j < 3; j++)
         {
             c1[j] = x[i][j];
             c2[j] = y[i][j];
@@ -3635,6 +3637,7 @@ void init_gotoh_mat(int **S, int **JumpH, int **JumpV, int **P,
 {
     // fill first row/colum of JumpH,jumpV and path matrix P
     int i,j;
+
     for (i=0;i<xlen+1;i++)
         for (j=0;j<ylen+1;j++)
             H[i][j]=V[i][j]=P[i][j]=JumpH[i][j]=JumpV[i][j]=0;
@@ -3673,6 +3676,7 @@ void find_highest_align_score( int **S, int **P,
     int max_aln_i=xlen;
     int max_aln_j=ylen;
     int i,j;
+#pragma omp target teams distribute parallel for collapse(2)
     for (i=0;i<xlen+1;i++)
     {
         for (j=0;j<ylen+1;j++)
@@ -3729,6 +3733,8 @@ int calculate_score_gotoh(const int xlen,const int ylen, int **S,
 
     // fill S and P
     int diag_score,left_score,up_score;
+#pragma omp target
+#pragma omp teams distribute parallel for collapse(2)
     for (i=1;i<xlen+1;i++)
     {
         for (j=1;j<ylen+1;j++)
@@ -4087,6 +4093,7 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
         string chainID;
         stringstream ss;
         int i;
+
         for (i=0;i<xlen;i++)
         {
             chainID=resi_vec1[i].substr(5);
@@ -4099,6 +4106,7 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
             }
         }
         chainID_vec.clear();
+
         for (i=0;i<ylen;i++)
         {
             chainID=resi_vec2[i].substr(5);
@@ -4116,6 +4124,7 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
     string chainID2="";
     string chainID1_prev="";
     string chainID2_prev="";
+
     while(i1<xlen && i2<ylen)
     {
         if (byresi_opt==2)
@@ -4296,6 +4305,7 @@ double TMscore8_search(double **r1, double **r2, double **xtm, double **ytm,
     if(Lali<L_ini_min) L_ini_min=Lali;   
 
     int n_init=0, i_init;      
+
     for(i=0; i<n_init_max-1; i++)
     {
         n_init++;
@@ -4317,7 +4327,7 @@ double TMscore8_search(double **r1, double **r2, double **xtm, double **ytm,
     int i_ali[kmax], n_cut;
     int L_frag; //fragment length
     int iL_max; //maximum starting position for the fragment
-    
+#pragma omp parallel for num_threads(n_init)    
     for(i_init=0; i_init<n_init; i_init++)
     {
         L_frag=L_ini[i_init];
@@ -4864,6 +4874,7 @@ void output_pymol(const string xname, const string yname,
     }
     else
     {
+
         for (i=0;i<strlen(seqM);i++)
         {
             i1+=(seqxA[i]!='-' && seqxA[i]!='*');
@@ -5702,6 +5713,7 @@ double standard_TMscore(double **r1, double **r2, double **xtm, double **ytm,
     double tmscore;// collected alined residues from invmap
     int n_al = 0;
     int i;
+
     for (int j = 0; j<ylen; j++)
     {
         i = invmap[j];
@@ -5762,14 +5774,16 @@ double approx_TM(const int xlen, const int ylen, const int a_opt,
     double TMtmp=0;
     double d;
     double xtmp[3]={0,0,0};
+   
 
-    for(int i=0,j=0; j<ylen; j++)
+    for(int i = 0, j=0; j<ylen; j++)
     {
         i=invmap0[j];
         if(i>=0)//aligned
         {
             transform(t, u, &xa[i][0], &xtmp[0]);
             d=sqrt(dist(&xtmp[0], &ya[j][0]));
+	    
             TMtmp+=1/(1+(d/d0)*(d/d0));
             //if (d <= score_d8) TMtmp+=1/(1+(d/d0)*(d/d0));
         }
@@ -5777,6 +5791,7 @@ double approx_TM(const int xlen, const int ylen, const int a_opt,
     TMtmp/=Lnorm_0;
     return TMtmp;
 }
+
 
 void clean_up_after_approx_TM(int *invmap0, int *invmap,
     double **score, bool **path, double **val, double **xtm, double **ytm,
@@ -5814,6 +5829,7 @@ int score_fun8( double **xa, double **ya, int n_ali, double d, int i_ali[],
 
         n_cut=0;
         score_sum=0;
+
         for(i=0; i<n_ali; i++)
         {
             di = dist(xa[i], ya[i]);
