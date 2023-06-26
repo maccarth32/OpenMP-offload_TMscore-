@@ -3181,6 +3181,7 @@ bool Kabsch(double **x, double **y, int n, int mode, double *rms,
     double c1[3], c2[3];
     double s1[3], s2[3];
     double sx[3], sy[3], sz[3];
+
     for (i = 0; i < 3; i++)
     {
         s1[i] = 0.0;
@@ -3238,6 +3239,7 @@ bool Kabsch(double **x, double **y, int n, int mode, double *rms,
         yc[i] = s2[i] / n;
     }
     if (mode == 2 || mode == 0)
+
         for (int mm = 0; mm < n; mm++)
             for (int nn = 0; nn < 3; nn++)
                 e0 += (x[mm][nn] - xc[nn]) * (x[mm][nn] - xc[nn]) + 
@@ -3257,6 +3259,7 @@ bool Kabsch(double **x, double **y, int n, int mode, double *rms,
 
     //compute tras(r)*r
     m = 0;
+
     for (j = 0; j<3; j++)
     {
         for (i = 0; i <= j; i++)
@@ -5713,7 +5716,7 @@ double standard_TMscore(double **r1, double **r2, double **xtm, double **ytm,
     double tmscore;// collected alined residues from invmap
     int n_al = 0;
     int i;
-
+#pragma omp parallel for num_threads(5)
     for (int j = 0; j<ylen; j++)
     {
         i = invmap[j];
@@ -5775,7 +5778,7 @@ double approx_TM(const int xlen, const int ylen, const int a_opt,
     double d;
     double xtmp[3]={0,0,0};
    
-
+#pragma omp parallel num_threads(5)
     for(int i = 0, j=0; j<ylen; j++)
     {
         i=invmap0[j];
@@ -5895,10 +5898,12 @@ int score_fun8_standard(double **xa, double **ya, int n_ali, double d,
     int i, n_cut, inc = 0;
     while (1)
     {
+
         for (i=0;i<5;i++) GDT_list_tmp[i]=0;
         maxsub_tmp=0;
         n_cut = 0;
         score_sum = 0;
+
         for (i = 0; i<n_ali; i++)
         {
             di = dist(xa[i], ya[i]);
@@ -5978,7 +5983,8 @@ double TMscore8_search(double **r1, double **r2, double **xtm, double **ytm,
     int L_ini_min=4;
     if(Lali<L_ini_min) L_ini_min=Lali;   
 
-    int n_init=0, i_init;      
+    int n_init=0, i_init;
+
     for(i=0; i<n_init_max-1; i++)
     {
         n_init++;
@@ -6011,6 +6017,7 @@ double TMscore8_search(double **r1, double **r2, double **xtm, double **ytm,
         {
             //extract the fragment starting from position i 
             ka=0;
+
             for(k=0; k<L_frag; k++)
             {
                 int kk=k+i;
@@ -6057,6 +6064,7 @@ double TMscore8_search(double **r1, double **r2, double **xtm, double **ytm,
             
             //try to extend the alignment iteratively            
             d = local_d0_search + 1;
+
             for(int it=0; it<n_it; it++)            
             {
                 ka=0;
@@ -6145,6 +6153,7 @@ double TMscore8_search_standard( double **r1, double **r2,
     if (Lali<L_ini_min) L_ini_min = Lali;
 
     int n_init = 0, i_init;
+   #pragma omp parallel for num_threads(n_init_max)
     for (i = 0; i<n_init_max - 1; i++)
     {
         n_init++;
@@ -6222,6 +6231,7 @@ double TMscore8_search_standard( double **r1, double **r2,
 
             //try to extend the alignment iteratively            
             d = local_d0_search + 1;
+
             for (int it = 0; it<n_it; it++)
             {
                 ka = 0;
@@ -6481,6 +6491,7 @@ int TMscore_main(double **xa, double **ya,
     m2=new int[ylen]; //alignd index in y
     do_rotation(xa, xt, xlen, t, u);
     k=0;
+
     for(int j=0; j<ylen; j++)
     {
         i=invmap0[j];
@@ -6590,8 +6601,10 @@ int TMscore_main(double **xa, double **ya,
 
     int kk=0, i_old=0, j_old=0;
     d=0;
+
     for(int k=0; k<n_ali8; k++)
     {
+
         for(int i=i_old; i<m1[k]; i++)
         {
             //align x to gap
