@@ -3213,7 +3213,7 @@ bool Kabsch(double **x, double **y, int n, int mode, double *rms,
     if (n<1) return false;
 
     //compute centers for vector sets x, y
-    
+
     for (i = 0; i<n; i++)
     {
    
@@ -3259,7 +3259,6 @@ bool Kabsch(double **x, double **y, int n, int mode, double *rms,
 
     //compute tras(r)*r
     m = 0;
-
     for (j = 0; j<3; j++)
     {
         for (i = 0; i <= j; i++)
@@ -3679,7 +3678,7 @@ void find_highest_align_score( int **S, int **P,
     int max_aln_i=xlen;
     int max_aln_j=ylen;
     int i,j;
-#pragma omp target teams distribute parallel for collapse(2)
+    #pragma omp target teams distribute parallel for collapse(2)
     for (i=0;i<xlen+1;i++)
     {
         for (j=0;j<ylen+1;j++)
@@ -6153,7 +6152,7 @@ double TMscore8_search_standard( double **r1, double **r2,
     if (Lali<L_ini_min) L_ini_min = Lali;
 
     int n_init = 0, i_init;
-   #pragma omp parallel for num_threads(n_init_max)
+
     for (i = 0; i<n_init_max - 1; i++)
     {
         n_init++;

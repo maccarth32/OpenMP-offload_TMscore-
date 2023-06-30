@@ -1,0 +1,68 @@
+#!/bin/bash
+# Begin LSF Directives
+#BSUB -P GEN243
+#BSUB -W 2:00
+#BSUB -nnodes 1
+#BSUB -alloc_flags gpumps
+#BSUB -J RunSim123
+#BSUB -o RunSim123.%J
+#BSUB -e RunSim123.%J
+
+total_time_gpu=0
+total_time_serial=0
+
+        start_time=$(date +%s.%N)
+        time ./tmscore_cpp_gpu 1gqi.pdb 1gqi.pdb
+	time ./tmscore_cpp_gpu 1h16.pdb 1h16.pdb
+	time ./tmscore_cpp_gpu 1rwh.pdb 1rwh.pdb
+	time ./tmscore_cpp_gpu 1v7w.pdb 1v7w.pdb
+	time ./tmscore_cpp_gpu 1w7c.pdb 1w7c.pdb
+	time ./tmscore_cpp_gpu 2eab.pdb 2eab.pdb
+	time ./tmscore_cpp_gpu 2gj4.pdb 2gj4.pdb
+	time ./tmscore_cpp_gpu 2xdw.pdb 2xdw.pdb
+	time ./tmscore_cpp_gpu 2yfo.pdb 2yfo.pdb
+	time ./tmscore_cpp_gpu 3b34.pdb 3b34.pdb
+	time ./tmscore_cpp_gpu 3s5m.pdb 3s5m.pdb
+	time ./tmscore_cpp_gpu 4i3g.pdb 4i3g.pdb
+	time ./tmscore_cpp_gpu 5fav.pdb 5fav.pdb
+        time ./tmscore_cpp_gpu A0AV02-model1.pdb A0AV02-model2.pdb 
+        time ./tmscore_cpp_gpu A1A5B4-model1.pdb A1A5B4-model2.pdb
+        time ./tmscore_cpp_gpu A1A5C7-model1.pdb A1A5C7-model2.pdb
+        time ./tmscore_cpp_gpu A5X5Y0-model1.pdb A5X5Y0-model2.pdb
+        time ./tmscore_cpp_gpu model1.pdb model2.pdb
+        end_time=$(date +%s.%N)
+
+        execution_time=$(echo "$end_time - $start_time" | bc)
+        total_time_gpu=$(echo "$total_time_gpu + $execution_time" | bc)
+       	echo "END OF GPU HERE"
+
+        start_time=$(date +%s.%N)
+        time ./tmscore_cpp_serial 1gqi.pdb 1gqi.pdb
+        time ./tmscore_cpp_serial 1h16.pdb 1h16.pdb
+        time ./tmscore_cpp_serial 1rwh.pdb 1rwh.pdb 
+        time ./tmscore_cpp_serial 1v7w.pdb 1v7w.pdb 
+        time ./tmscore_cpp_serial 1w7c.pdb 1w7c.pdb
+        time ./tmscore_cpp_serial 2eab.pdb 2eab.pdb
+        time ./tmscore_cpp_serial 2gj4.pdb 2gj4.pdb
+        time ./tmscore_cpp_serial 2xdw.pdb 2xdw.pdb
+        time ./tmscore_cpp_serial 2yfo.pdb 2yfo.pdb
+        time ./tmscore_cpp_serial 3b34.pdb 3b34.pdb
+        time ./tmscore_cpp_serial 3s5m.pdb 3s5m.pdb
+        time ./tmscore_cpp_serial 4i3g.pdb 4i3g.pdb
+        time ./tmscore_cpp_serial 5fav.pdb 5fav.pdb
+        time ./tmscore_cpp_serial A0AV02-model1.pdb A0AV02-model2.pdb
+        time ./tmscore_cpp_serial A1A5B4-model1.pdb A1A5B4-model2.pdb
+        time ./tmscore_cpp_serial A1A5C7-model1.pdb A1A5C7-model2.pdb
+        time ./tmscore_cpp_serial A5X5Y0-model1.pdb A5X5Y0-model2.pdb
+        time ./tmscore_cpp_serial model1.pdb model2.pdb
+        end_time=$(date +%s.%N)
+
+        execution_time=$(echo "$end_time - $start_time" | bc)
+        total_time_serial=$(echo "$total_time_serial + $execution_time" | bc)
+       
+
+echo "CPU Total Execution Time = $total_time_serial seconds"
+echo "GPU Total Execution Time = $total_time_gpu seconds"
+
+cp my_output_file .
+
